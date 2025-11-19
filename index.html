@@ -1,16 +1,4 @@
 <!DOCTYPE html>
-<html lang="en">
-
-  <head>
-    <meta charset="UTF-8">
-    <title>iframe tester</title>
-    <link rel="stylesheet" href="https://public.codepenassets.com/css/reset-2.0.min.css">
-
-
-  </head>
-    
-  <body>
-  <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="utf-8" />
@@ -33,13 +21,14 @@ body{
 
 .radio-player{
   width:100%;
-  max-width:420px;       /* lebih kecil */
+  max-width:420px;
   background:rgba(255,255,255,0.08);
   border-radius:20px;
   backdrop-filter:blur(15px);
   box-shadow:0 10px 30px rgba(0,0,0,0.4);
   overflow:hidden;
   color:#fff;
+  padding-bottom:20px;
 }
 
 /* HEADER */
@@ -55,59 +44,23 @@ body{
   position:relative;
 }
 
-.cover-glow{
-  position:absolute; inset:0;
-  border-radius:20px;
-  filter:blur(40px);
-  opacity:0;
-  background:radial-gradient(circle,rgba(255,255,255,0.4),transparent 70%);
-  transition:opacity .6s ease, background .6s ease;
-}
-
-@keyframes pulseGlow{
-  0%{transform:scale(1)}
-  50%{transform:scale(1.15)}
-  100%{transform:scale(1)}
-}
-.cover-glow.pulse{animation:pulseGlow 1.6s ease}
-
-/* album art */
-.album-art{
+#cover{
   width:100%;height:100%;
   border-radius:20px;
-  overflow:hidden;
+  background-size:cover;
+  background-position:center;
   box-shadow:0 15px 35px rgba(0,0,0,0.5);
-  display:flex;justify-content:center;align-items:center;
-  background:rgba(0,0,0,0.25);
 }
 
-.album-art img{width:100%;height:100%;object-fit:cover;display:none}
-.no-cover{font-size:13px;opacity:.7}
-
 /* ------------ TRACK INFO ------------- */
-.track-info{text-align:center;padding:0 15px 10px}
-#trackTitle{
+.track-info{text-align:center;padding:0 15px 15px}
+#title{
   font-size:18px;font-weight:600;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-#trackArtist{opacity:.85;font-size:14px;margin-top:3px}
-#trackAlbum{opacity:.65;font-size:12px;margin-top:2px}
+#artist{opacity:.85;font-size:14px;margin-top:3px}
 
-/* marquee */
-.marquee{
-  width:100%;overflow:hidden;white-space:nowrap;
-}
-.marquee span{
-  display:inline-block;
-  padding-left:100%;
-  animation:marq 12s linear infinite;
-}
-@keyframes marq{
-  0%{transform:translateX(0)}
-  100%{transform:translateX(-100%)}
-}
-
-/* ------------ CONTROLS ------------ */
+/* Controls */
 .controls{padding:12px}
 
 .playback-controls{
@@ -134,7 +87,7 @@ body{
 .volume-controls{
   display:flex;
   align-items:center;
-  justify-content:center;   /* ➜ BAR DI TENGAH */
+  justify-content:center;
   gap:15px;
 }
 
@@ -152,194 +105,149 @@ body{
   background:white;
 }
 
-.status{text-align:center;font-size:13px;opacity:.75;margin:10px 0}
-.footer{text-align:center;font-size:12px;opacity:.45;padding:10px}
+.footer{text-align:center;font-size:12px;opacity:.4;padding:10px}
 </style>
 </head>
 
 <body>
-<div class="radio-player">
+
+<div class="radio-player" id="playerBox">
+
   <div class="header">
     <h1>Firza Radio Medan</h1>
-    <p>More then the other</p>
+    <p>More than the other</p>
   </div>
 
   <div class="album-wrap">
-    <div class="cover-glow" id="coverGlow"></div>
-    <div class="album-art">
-      <div class="no-cover" id="noCover">Memuat cover...</div>
-      <img id="coverImage" />
-    </div>
+    <div id="cover"></div>
   </div>
 
   <div class="track-info">
-    <div id="trackTitle">Radio</div>
-    <div id="trackArtist">Memuat...</div>
-    <div id="trackAlbum">Firza & Kiara</div>
+    <div id="title">Memuat...</div>
+    <div id="artist">Menunggu data...</div>
   </div>
 
   <div class="controls">
     <div class="playback-controls">
       <button class="control-btn" id="prevBtn">⏮</button>
-      <button class="control-btn play-btn" id="playBtn">▶</button>
+      <button class="control-btn play-btn" id="playButton"><span id="playIcon">▶</span></button>
       <button class="control-btn" id="nextBtn">⏭</button>
     </div>
 
     <div class="volume-controls">
-      🔊 <input type="range" id="volumeSlider" class="volume-slider" min="0" max="1" step="0.01" value="0.7">
+      🔊 <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="70">
     </div>
   </div>
 
-  <div class="status" id="statusText">Siap diputar</div>
   <div class="footer">© Firza Radio 2026</div>
+
 </div>
 
+<audio id="radio" src="https://stream.zeno.fm/49c2uvzd4reuv"></audio>
+
 <script>
-// ----- CONFIG -----
-const streamUrl = "https://stream.zeno.fm/49c2uvzd4reuv";
-const apiUrl = "https://zenoplay.zenomedia.com/api/zenofm/nowplaying/49c2uvzd4reuv";
-const defaultCover = "https://www.radioplug.co.uk/img/channel/07-07-2019-06-09-53.jpg";
+const id = "49c2uvzd4reuv";
+const api = `https://zenoplay.zenomedia.com/api/zenofm/nowplaying/${id}`;
+const defaultCover = "https://dpi4fupzvxbqq.cloudfront.net/rfm/uploads/blogo/300/300_1470024235.png";
 
-// ----- ELEMENTS -----
-const coverImage = document.getElementById("coverImage");
-const noCover = document.getElementById("noCover");
-const trackTitle = document.getElementById("trackTitle");
-const trackArtist = document.getElementById("trackArtist");
-const coverGlow = document.getElementById("coverGlow");
-const playBtn = document.getElementById("playBtn");
+const audio       = document.getElementById("radio");
+const titleEl     = document.getElementById("title");
+const artistEl    = document.getElementById("artist");
+const coverEl     = document.getElementById("cover");
+const playBtn     = document.getElementById("playButton");
+const playIcon    = document.getElementById("playIcon");
 const volumeSlider = document.getElementById("volumeSlider");
-const statusText = document.getElementById("statusText");
+const playerBox    = document.getElementById("playerBox");
 
-// ----- AUDIO -----
-const audio = new Audio(streamUrl);
-audio.volume = volumeSlider.value;
-let isPlaying = false;
-
-// ----- CORS FIX COVER FETCH -----
-async function fetchCover(artist, title){
-  const q = encodeURIComponent(`${artist} ${title}`);
-  const url = `https://api.allorigins.win/raw?url=${encodeURIComponent("https://itunes.apple.com/search?term="+q+"&limit=1")}`;
-
-  try{
-    const res = await fetch(url);
-    const json = await res.json();
-    if(json.results?.length > 0){
-      return json.results[0].artworkUrl100.replace("100x100","600x600");
-    }
-  }catch(e){}
-
-  return defaultCover;
-}
-
-// ----- TRACK UPDATE -----
-async function updateTrack(){
-  try{
-    const res = await fetch(apiUrl + "?r=" + Math.random());
-    const data = await res.json();
-
-    let raw = data.title || "";
-    let artist = "Tidak diketahui";
-    let title = raw;
-
-    if(raw.includes(" - ")){
-      const parts = raw.split(" - ");
-      artist = parts[0].trim();
-      title = parts[1].trim();
-    }
-
-    // apply text
-    if(title.length > 22){
-      trackTitle.innerHTML = `<div class="marquee"><span>${title}</span></div>`;
-    } else {
-      trackTitle.textContent = title;
-    }
-    trackArtist.textContent = artist;
-
-    // cover
-    const coverUrl = await fetchCover(artist,title);
-
-    coverImage.onload = ()=>{
-      noCover.style.display = "none";
-      coverImage.style.display = "block";
-      applyGlow();
-    };
-    coverImage.onerror = ()=>{
-      coverImage.src = defaultCover;
-      noCover.style.display = "block";
-    };
-    coverImage.src = coverUrl;
-
-    // pulse animation
-    coverGlow.classList.add("pulse");
-    setTimeout(()=>coverGlow.classList.remove("pulse"),1500);
-
-  }catch(e){}
-}
-
-// ----- Glow & average color -----
-function applyGlow(){
-  const img = coverImage;
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
-  ctx.drawImage(img,0,0);
-
-  const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
-  let r=0,g=0,b=0,count=0;
-
-  for(let i=0;i<data.length;i+=50){
-    r += data[i]; g += data[i+1]; b += data[i+2]; count++;
-  }
-
-  r=Math.floor(r/count); g=Math.floor(g/count); b=Math.floor(b/count);
-
-  coverGlow.style.background = `radial-gradient(circle, rgba(${r},${g},${b},0.7), transparent 70%)`;
-  coverGlow.style.opacity = 1;
-}
-
-// ----- Background auto-change every 20–30 seconds -----
-const bgSet = [
-  ["#ff512f","#dd2476"],
-  ["#1a2a6c","#b21f1f","#fdbb2d"],
-  ["#00c6ff","#0072ff"],
-  ["#7f00ff","#e100ff"],
-  ["#ff9966","#ff5e62"]
-];
-
-function changeBG(){
-  const bg = bgSet[Math.floor(Math.random()*bgSet.length)];
-  document.body.style.background = `linear-gradient(120deg, ${bg.join(",")})`;
-}
-
-setInterval(changeBG, 25000);   // ~25 detik
-changeBG();
-
-// ----- Controls -----
-playBtn.onclick = ()=>{
-  if(!isPlaying){
+/* PLAY / PAUSE */
+playBtn.onclick = () => {
+  if (audio.paused) {
     audio.play();
-    isPlaying = true;
-    playBtn.textContent = "⏸";
-    statusText.textContent = "Memutar...";
-  }else{
+    playIcon.textContent = "❚❚";
+  } else {
     audio.pause();
-    isPlaying = false;
-    playBtn.textContent = "▶";
-    statusText.textContent = "Dijeda";
+    playIcon.textContent = "▶";
   }
 };
 
-volumeSlider.oninput = ()=> audio.volume = volumeSlider.value;
+/* Volume */
+volumeSlider.oninput = () => {
+  audio.volume = volumeSlider.value / 100;
+};
 
-// ----- Start -----
-updateTrack();
-setInterval(updateTrack,10000);
+/* COLOR EXTRACTOR */
+function extractColor(url, callback){
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.src = url;
+  img.onload = () => {
+    const c = document.createElement("canvas");
+    const x = c.getContext("2d");
+    c.width = img.width;
+    c.height = img.height;
+    x.drawImage(img,0,0);
+    const d = x.getImageData(0,0,c.width,c.height).data;
+    let r=0,g=0,b=0,count=0;
+    for(let i=0;i<d.length;i+=4){
+      r+=d[i]; g+=d[i+1]; b+=d[i+2]; count++;
+    }
+    callback(`rgb(${~~(r/count)},${~~(g/count)},${~~(b/count)})`);
+  };
+}
+
+/* iTunes Cover API */
+async function getCover(artist, title) {
+  try {
+    const q = encodeURIComponent(`${artist} ${title}`);
+    const res = await fetch(`https://itunes.apple.com/search?term=${q}&entity=song&limit=1`);
+    const data = await res.json();
+    if (data.results.length > 0) {
+      return data.results[0].artworkUrl100.replace("100x100bb.jpg","600x600bb.jpg");
+    }
+  } catch {}
+  return defaultCover;
+}
+
+/* Glow Color */
+function setGlow(color){
+  playerBox.style.boxShadow = `0 0 35px 15px ${color}`;
+  coverEl.style.boxShadow   = `0 0 25px ${color}`;
+  playBtn.style.boxShadow   = `0 0 25px ${color}`;
+}
+
+/* Fetch Now Playing */
+async function updateSong() {
+  try {
+    const res = await fetch(api);
+    const data = await res.json();
+
+    const text = data.title || "Live Stream";
+    let artist = "";
+    let title  = text;
+
+    if (text.includes(" - ")) {
+      artist = text.split(" - ")[0].trim();
+      title  = text.split(" - ")[1].trim();
+    }
+
+    titleEl.textContent = title;
+    artistEl.textContent = artist;
+
+    const cover = await getCover(artist, title);
+    coverEl.style.backgroundImage = `url("${cover}")`;
+
+    extractColor(cover, (color)=> setGlow(color));
+
+  } catch(e) {
+    titleEl.textContent = "Radio Stream";
+    coverEl.style.backgroundImage = `url("${defaultCover}")`;
+    setGlow("cyan");
+  }
+}
+
+updateSong();
+setInterval(updateSong, 20000);
 </script>
 
 </body>
-</html>
-    
-  </body>
-  
 </html>
