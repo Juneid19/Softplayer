@@ -208,12 +208,44 @@ async function getCover(artist, title) {
   return defaultCover;
 }
 
-/* Glow Color */
-function setGlow(color){
-  playerBox.style.boxShadow = `0 0 35px 15px ${color}`;
-  coverEl.style.boxShadow   = `0 0 25px ${color}`;
-  playBtn.style.boxShadow   = `0 0 25px ${color}`;
+// ----- Glow & average color -----
+function applyGlow(){
+  const img = coverImage;
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  ctx.drawImage(img,0,0);
+
+  const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+  let r=0,g=0,b=0,count=0;
+
+  for(let i=0;i<data.length;i+=50){
+    r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+  }
+
+  r=Math.floor(r/count); g=Math.floor(g/count); b=Math.floor(b/count);
+
+  coverGlow.style.background = `radial-gradient(circle, rgba(${r},${g},${b},0.7), transparent 70%)`;
+  coverGlow.style.opacity = 1;
 }
+
+// ----- Background auto-change every 20–30 seconds -----
+const bgSet = [
+  ["#ff512f","#dd2476"],
+  ["#1a2a6c","#b21f1f","#fdbb2d"],
+  ["#00c6ff","#0072ff"],
+  ["#7f00ff","#e100ff"],
+  ["#ff9966","#ff5e62"]
+];
+
+function changeBG(){
+  const bg = bgSet[Math.floor(Math.random()*bgSet.length)];
+  document.body.style.background = `linear-gradient(120deg, ${bg.join(",")})`;
+}
+
+setInterval(changeBG, 25000);   // ~25 detik
+changeBG();
 
 /* Fetch Now Playing */
 async function updateSong() {
