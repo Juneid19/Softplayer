@@ -50,6 +50,19 @@ body{
   background-size:cover;
   background-position:center;
   box-shadow:0 15px 35px rgba(0,0,0,0.5);
+  /* Tambahkan transisi untuk efek yang lebih halus saat cover berubah */
+  transition: background-image 0.5s ease; 
+}
+
+/* Tambahkan DIV baru untuk GLOW, karena fungsi extractColor Anda membutuhkan ini */
+#cover-glow{
+  position:absolute;
+  top:0;left:0;
+  width:100%;height:100%;
+  filter:blur(15px);
+  border-radius:20px;
+  opacity:0;
+  transition:opacity 1s ease;
 }
 
 /* ------------ TRACK INFO ------------- */
@@ -119,7 +132,7 @@ body{
   </div>
 
   <div class="album-wrap">
-    <div id="cover"></div>
+    <div id="cover-glow"></div> <div id="cover"></div>
   </div>
 
   <div class="track-info">
@@ -154,10 +167,37 @@ const audio       = document.getElementById("radio");
 const titleEl     = document.getElementById("title");
 const artistEl    = document.getElementById("artist");
 const coverEl     = document.getElementById("cover");
+const coverGlow   = document.getElementById("cover-glow"); // Tambahan untuk glow
 const playBtn     = document.getElementById("playButton");
 const playIcon    = document.getElementById("playIcon");
 const volumeSlider = document.getElementById("volumeSlider");
 const playerBox    = document.getElementById("playerBox");
+
+// --- DATABASE QARI/ARTIS ---
+const qariDatabase = {
+    'mishary': 'https://i.ytimg.com/vi/GLMp_EGGLfk/hq720.jpg?sqp=-oaymwExCK4FEIIDSFryq4qpAyMIARUAAIhCGAHwAQH4AdQGgALgA4oCDAgAEAEYciBWKDgwDw==&rs=AOn4CLAa_DZgLB8D4xcMTFPgxpnQghg_sw',
+    'abdul': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT99qAcwhSDEUMmxHHzjEfna9YVgtg-04A8rDvXbaNtZf-70ZkRxFPl_i5J_he-DnfdtO7EhS0ouUaiu-hq_bE8Ni9U3xKBjsAdFgzAg4w&s=10',
+    'adi hidayat': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQi7cw0cL0cs4aqyXA5sbBMBaCWGmW0D28pzruJKEWXlx9RYeQLuZouy9VlqLk9oWvOxlO7jHAh6QOXhjPyKPQZqz2rez4YV5XOPrgTTQ&s=10',
+    'zainuddin': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSDo4WarU6dxMHRx3BFqisexu4euGqv9Ni9_JZA5jZBwA&s=10',
+    'latif': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSgeut2z_VzZzl5_B7sbcdxL2FkG3Rd3dOTaS3WCOXEA&s=10',
+    'al sudais': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Abdulrahman_Al-Sudais.jpg/440px-Abdulrahman_Al-Sudais.jpg',
+    'ghamdi': 'https://i.ibb.co/Wp0y1hG/ghamdi.jpg',
+    'shatri': 'https://i.ibb.co/fQ5N204/shatri.jpg',
+    'abdul basit': 'https://i.ibb.co/RzM805h/abdulbasit.jpg',
+};
+// ---------------------------------------------
+
+/* FUNGSI BARU/MODIFIKASI: Mendapatkan Cover dari Database Qari */
+function getQariCover(name) {
+    const lowerName = name.toLowerCase().trim();
+    for (const key in qariDatabase) {
+        // Cek apakah nama artis mengandung keyword di database
+        if (lowerName.includes(key)) {
+            return qariDatabase[key];
+        }
+    }
+    return null;
+}
 
 /* PLAY / PAUSE */
 playBtn.onclick = () => {
@@ -175,7 +215,7 @@ volumeSlider.oninput = () => {
   audio.volume = volumeSlider.value / 100;
 };
 
-/* COLOR EXTRACTOR */
+/* Color Extractor (untuk GLOW) */
 function extractColor(url, callback){
   const img = new Image();
   img.crossOrigin = "anonymous";
@@ -193,10 +233,26 @@ function extractColor(url, callback){
     }
     callback(`rgb(${~~(r/count)},${~~(g/count)},${~~(b/count)})`);
   };
+  // Handle error loading image
+  img.onerror = () => callback("rgb(255,255,255)"); 
 }
 
-/* iTunes Cover API */
+/* Fungsi untuk mengatur Glow pada cover */
+function setGlow(color){
+    coverGlow.style.background = `radial-gradient(circle, ${color}, transparent 70%)`;
+    coverGlow.style.opacity = 1;
+}
+
+/* MODIFIKASI: iTunes Cover API (Sekarang menjadi Fallback) */
 async function getCover(artist, title) {
+  
+  // 1. PRIORITAS: Cek Database Qari
+  const qariCover = getQariCover(artist) || getQariCover(title);
+  if (qariCover) {
+      return qariCover;
+  }
+  
+  // 2. FALLBACK: Cek iTunes
   try {
     const q = encodeURIComponent(`${artist} ${title}`);
     const res = await fetch(`https://itunes.apple.com/search?term=${q}&entity=song&limit=1`);
@@ -205,29 +261,9 @@ async function getCover(artist, title) {
       return data.results[0].artworkUrl100.replace("100x100bb.jpg","600x600bb.jpg");
     }
   } catch {}
+  
+  // 3. TERAKHIR: Default Cover
   return defaultCover;
-}
-
-// ----- Glow & average color -----
-function applyGlow(){
-  const img = coverImage;
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
-  ctx.drawImage(img,0,0);
-
-  const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
-  let r=0,g=0,b=0,count=0;
-
-  for(let i=0;i<data.length;i+=50){
-    r += data[i]; g += data[i+1]; b += data[i+2]; count++;
-  }
-
-  r=Math.floor(r/count); g=Math.floor(g/count); b=Math.floor(b/count);
-
-  coverGlow.style.background = `radial-gradient(circle, rgba(${r},${g},${b},0.7), transparent 70%)`;
-  coverGlow.style.opacity = 1;
 }
 
 // ----- Background auto-change every 20–30 seconds -----
@@ -257,10 +293,27 @@ async function updateSong() {
     let artist = "";
     let title  = text;
 
+    // Logika pemisahan Artist - Title
     if (text.includes(" - ")) {
       artist = text.split(" - ")[0].trim();
       title  = text.split(" - ")[1].trim();
+    } else {
+        // Coba identifikasi artist dari database Qari
+        for (const key in qariDatabase) {
+            if (text.toLowerCase().includes(key)) {
+                artist = key.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '); 
+                title = text.replace(new RegExp(key, 'gi'), '').trim();
+                // Bersihkan title
+                if (title.endsWith('-')) title = title.substring(0, title.length - 1).trim();
+                if (title.startsWith('-')) title = title.substring(1).trim();
+                if (title === "" || title.length < 3) title = "Murottal"; // Default Murottal jika judul kosong setelah dipisah
+                break;
+            }
+        }
     }
+    
+    if (artist === "") artist = "Firza Radio Medan";
+
 
     titleEl.textContent = title;
     artistEl.textContent = artist;
@@ -268,12 +321,18 @@ async function updateSong() {
     const cover = await getCover(artist, title);
     coverEl.style.backgroundImage = `url("${cover}")`;
 
-    extractColor(cover, (color)=> setGlow(color));
+    // Pastikan fungsi setGlow dipanggil dengan warna yang diekstrak
+    extractColor(cover, (color)=> {
+        setGlow(color);
+        // Bonus: Ubah warna player box berdasarkan warna cover utama
+        playerBox.style.boxShadow = `0 10px 30px ${color}80`; 
+    });
 
   } catch(e) {
     titleEl.textContent = "Radio Stream";
+    artistEl.textContent = "Gagal memuat data";
     coverEl.style.backgroundImage = `url("${defaultCover}")`;
-    setGlow("cyan");
+    setGlow("rgb(255,255,255)"); // Atur glow ke putih jika gagal
   }
 }
 
